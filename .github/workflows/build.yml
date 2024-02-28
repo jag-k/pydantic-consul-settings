@@ -12,6 +12,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PACKAGE_NAME: ${{ github.repository.split('/')[1] }}
+      PACKAGE_VERSION: ${{ github.ref_name.slice(1) }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +40,14 @@ jobs:
         run: |
           poetry self add "poetry-dynamic-versioning[plugin]" --no-interaction
           poetry config pypi-token.pypi $PYPI_TOKEN
+
+          # Split package name and version by space
+          read -r PACKAGE_NAME PACKAGE_VERSION <<< "$(poetry version --no-ansi)"
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> "$GITHUB_ENV"
+
           poetry publish --build --no-interaction && echo "published=1" >> "$GITHUB_ENV" || echo "published=0" >> "$GITHUB_ENV"
+
 
       - name: Check if published
         run: |
@@ -51,8 +62,13 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          body: |
+            This is a release for the ${{ github.ref }} tag.
+
+            PyPi package: [${{ env.PACKAGE_NAME }}==${{ env.PACKAGE_VERSION }}](https://pypi.org/project/${{ env.PACKAGE_NAME }}/${{ env.PACKAGE_VERSION }})
           draft: false
           prerelease: false
           generate_release_notes: true
+          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
