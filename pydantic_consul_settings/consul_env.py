@@ -1,3 +1,5 @@
+import logging
+
 from typing import Any, Dict, Literal, Tuple, Type, TypedDict
 
 from consul import Consul, ConsulException
@@ -8,10 +10,12 @@ from pydantic_settings import PydanticBaseSettingsSource, SettingsConfigDict
 
 __all__ = (
     "BaseSettings",
-    "create_settings",
     "ConsulBaseSettings",
     "ConsulConfigSettingsSource",
+    "ConsulSettingsConfigDict",
 )
+
+logger = logging.getLogger("pydantic_consul_settings")
 
 
 class ConsulValue(TypedDict, total=False):
@@ -110,10 +114,15 @@ class ConsulConfigSettingsSource(PydanticBaseSettingsSource):
             index, values = self.consul.kv.get(
                 f"{self.consul_prefix}/{self.prefix}{(field.alias or field_name).upper()}",
             )  # type: str, ConsulValue | None
-
+            logger.debug("Got the value for the field %r from the Consul with index %s: %r", field_name, index, values)
             return values, field_name, True
 
-        except ConsulException:
+        except ConsulException as e:
+            logger.debug(
+                "Failed to get the value for the field %r from the Consul.",
+                field_name,
+                exc_info=e,
+            )
             return None, field_name, False
 
     def prepare_field_value(
@@ -152,16 +161,16 @@ class ConsulConfigSettingsSource(PydanticBaseSettingsSource):
         return d
 
 
+class ConsulSettingsConfigDict(SettingsConfigDict, total=False):
+    """Consul settings config dict."""
+
+    consul_model: ConsulBaseSettings | None
+
+
 class BaseSettings(PydanticBaseSettings):
     """New base settings settings."""
 
-    @classmethod
-    def get_consul_settings(cls) -> ConsulBaseSettings:
-        """Get the Consul settings.
-
-        Can be overridden in the derived class to provide custom Consul settings.
-        """
-        return ConsulBaseSettings()
+    model_config: ConsulSettingsConfigDict
 
     @classmethod
     def settings_customise_sources(
@@ -181,36 +190,19 @@ class BaseSettings(PydanticBaseSettings):
         :param file_secret_settings: The `SecretsSettingsSource` instance.
         :return: A tuple containing the sources and their order for loading the settings values.
         """
-        settings_source = super(cls).settings_customise_sources(
+        settings_source = super().settings_customise_sources(
             settings_cls,
             init_settings,
             env_settings,
             dotenv_settings,
             file_secret_settings,
         )
-        settings = cls.get_consul_settings()
-        if not settings.enabled():
+        consul_settings: ConsulBaseSettings | None = cls.model_config.get("consul_model", None)
+        if not isinstance(consul_settings, ConsulBaseSettings) or not consul_settings.enabled():
             return settings_source
 
         return (
             settings_source[0],
-            ConsulConfigSettingsSource(settings_cls, settings),
+            ConsulConfigSettingsSource(settings_cls, consul_settings=consul_settings),
             *settings_source[1:],
         )
-
-
-def create_settings(consul_settings: ConsulBaseSettings) -> Type[BaseSettings]:
-    """Create base settings with Consul settings source.
-
-    :param consul_settings: The Consul settings.
-    :return: The base settings with Consul settings source.
-    """
-
-    class _BaseSettings(BaseSettings):
-        """New base settings settings."""
-
-        @classmethod
-        def get_consul_settings(cls) -> ConsulBaseSettings:
-            return consul_settings
-
-    return _BaseSettings
