@@ -1,0 +1,97 @@
+[tool.poetry]
+name = "pydantic-consul-settings"
+version = "0.1.0"
+description = "Add Consul as source of env variable to settings"
+authors = ["Jag_k <jag-k@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [
+    { include = "pydantic_consul_settings", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "^2.6.3"
+pydantic-settings = "^2.2.1"
+python-consul2 = "^0.1.5"
+
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.6.2"
+ruff = "^0.2.2"
+ssort = "^0.12.4"
+ruff-lsp = "^0.0.52"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+# https://docs.astral.sh/ruff/
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = [
+    ".pytest_cache",
+    ".idea",
+]
+
+# https://docs.astral.sh/ruff/settings/#lint
+[tool.ruff.lint]
+ignore-init-module-imports = true
+select = [
+    'F', # flake8
+    'I', # isort
+    'B', # flake8-bugbear
+    'D', # pydocstyle
+    'W', # pycodestyle (warnings)
+    'E', # pycodestyle (errors)
+    'N', # pep8-naming
+    'PT', # flake8-pytest-style
+    'C90', # mccabe
+]
+ignore = [
+    'B012', # {name} inside finally blocks cause exceptions to be silenced
+    'D100', # Missing docstring in public module
+    'D104', # Missing docstring in public package
+    'D105', # Missing docstring in magic method
+    'D106', # Missing docstring in public nested class
+    'D107', # Missing docstring in __init__
+    'D203', # 1 blank line required before class docstring
+    'D401', # First line of docstring should be in imperative mood: "{first_line}"
+    'D404', # First word of the docstring should not be "This"
+    'D207', # Docstring is under-indented
+    'D208', # Docstring is over-indented
+]
+
+
+
+# https://docs.astral.sh/ruff/settings/#extend-per-file-ignores
+[tool.ruff.lint.extend-per-file-ignores]
+'__init__.py' = [
+    'F401', # {name} imported but unused; consider using importlib.util.find_spec to test for availability
+    'F403', # from {name} import * used; unable to detect undefined names
+    'F405', # {name} may be undefined, or defined from star imports
+]
+
+# https://docs.astral.sh/ruff/settings/#lintpydocstyle
+[tool.ruff.lint.pydocstyle]
+convention = 'pep257'
+
+
+# https://docs.astral.sh/ruff/settings/#lintmccabe
+[tool.ruff.lint.mccabe]
+max-complexity = 6
+
+# https://docs.astral.sh/ruff/settings/#lintisort
+[tool.ruff.lint.isort]
+section-order = [
+    'future',
+    'standard-library',
+    'third-party',
+    'first-party',
+    'local-folder',
+]
+known-first-party = ["pydantic_consul_settings"]
+lines-after-imports = 2
+lines-between-types = 1
