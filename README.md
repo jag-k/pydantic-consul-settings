@@ -1,7 +1,9 @@
 # Pydantic Consul settings
 
-**Add Consul as source of env variable to settings**
+[![PyPI version](https://img.shields.io/pypi/v/pydantic-consul-settings?logo=pypi&label=pydantic-consul-settings)](https://pypi.org/project/pydantic-consul-settings/)
+[![PyPI publish](https://github.com/jag-k/pydantic-consul-settings/actions/workflows/build.yml/badge.svg)](https://github.com/jag-k/pydantic-consul-settings/actions/workflows/build.yml)
 
+**Add Consul as source of env variable to settings**
 
 This package provides a way to use [pydantic](https://docs.pydantic.dev/) settings with [consul](https://consul.io) as source of environment variables.
 
