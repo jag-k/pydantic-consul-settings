@@ -8,12 +8,8 @@ permissions:
 
 on:
   push:
-    branches:
-      - "main"
     tags:
       - "v*.*.*"
-  release: # This will publish on every release
-    types: [ published ]
 
 
 jobs:
@@ -37,6 +33,7 @@ jobs:
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
+          poetry self add "poetry-dynamic-versioning[plugin]" --no-interaction
           poetry config pypi-token.pypi $PYPI_TOKEN
           poetry publish --build --no-interaction && echo "published=1" >> "$GITHUB_ENV" || echo "published=0" >> "$GITHUB_ENV"
 
