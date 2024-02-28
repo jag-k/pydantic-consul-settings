@@ -1,9 +1,11 @@
 [tool.poetry]
 name = "pydantic-consul-settings"
-version = "1.0.2"
+version = "1.0.3"
 description = "Add Consul as source of env variable to settings"
 authors = ["Jag_k <jag-k@users.noreply.github.com>"]
 license = "MIT"
+repository = "https://github.com/jag-k/pydantic-consul-settings"
+homepage = "https://github.com/jag-k/pydantic-consul-settings#readme"
 readme = "README.md"
 packages = [
     { include = "pydantic_consul_settings", from = "." },
