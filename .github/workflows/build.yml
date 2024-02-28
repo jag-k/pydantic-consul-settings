@@ -3,9 +3,15 @@
 
 name: Python package
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ "main" ]
+  release: # This will publish on every release
+    types: [ published ]
+
 
 jobs:
   build:
