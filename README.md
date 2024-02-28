@@ -1,7 +1,6 @@
 # Pydantic Consul settings
 
 [![PyPI version](https://img.shields.io/pypi/v/pydantic-consul-settings?logo=pypi&label=pydantic-consul-settings)](https://pypi.org/project/pydantic-consul-settings/)
-[![PyPI publish](https://github.com/jag-k/pydantic-consul-settings/actions/workflows/build.yml/badge.svg)](https://github.com/jag-k/pydantic-consul-settings/actions/workflows/build.yml)
 
 **Add Consul as source of env variable to settings**
 
@@ -17,11 +16,10 @@ pip install pydantic-consul-settings
 ## Usage
 
 ```python
-from pydantic_settings import SettingsConfigDict
-from pydantic_consul_settings import create_settings, ConsulBaseSettings
+from pydantic_consul_settings import BaseSettingsWithConsul, ConsulClientSettings, SettingsConfigDict
 
 
-class ConsulSettings(ConsulBaseSettings):
+class ConsulSettings(ConsulClientSettings):
     """Add additional settings for key generation"""
 
     stage: str = 'dev'
@@ -34,7 +32,11 @@ class ConsulSettings(ConsulBaseSettings):
         return f"{self.stage}/{self.service}"
 
 
-BaseSettings = create_settings(ConsulSettings())
+class BaseSettings(BaseSettingsWithConsul):
+  model_config = SettingsConfigDict(
+    env_prefix='APP_',
+    consul_model=ConsulSettings(),
+  )
 
 
 class Settings(BaseSettings):

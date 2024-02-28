@@ -5,14 +5,14 @@ from typing import Any, Dict, Literal, Tuple, Type, TypedDict
 from consul import Consul, ConsulException
 from pydantic.fields import Field, FieldInfo
 from pydantic_settings import BaseSettings as PydanticBaseSettings
-from pydantic_settings import PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import PydanticBaseSettingsSource
+from pydantic_settings import SettingsConfigDict as PydanticSettingsConfigDict
 
 
 __all__ = (
-    "BaseSettings",
-    "ConsulBaseSettings",
-    "ConsulConfigSettingsSource",
-    "ConsulSettingsConfigDict",
+    "BaseSettingsWithConsul",
+    "ConsulClientSettings",
+    "SettingsConfigDict",
 )
 
 logger = logging.getLogger("pydantic_consul_settings")
@@ -29,10 +29,10 @@ class ConsulValue(TypedDict, total=False):
     ModifyIndex: int  # 1234
 
 
-class ConsulBaseSettings(PydanticBaseSettings):
+class ConsulClientSettings(PydanticBaseSettings):
     """Consul settings."""
 
-    model_config = SettingsConfigDict(
+    model_config = PydanticSettingsConfigDict(
         title="Consul Settings",
         env_prefix="CONSUL_",
     )
@@ -70,18 +70,29 @@ class ConsulBaseSettings(PydanticBaseSettings):
 
     @property
     def key_prefix(self) -> str:
-        """Get the key prefix."""
+        """Get the key prefix.
+
+        Can be overridden in the child classes to set the key prefix.
+        :return: The key prefix.
+        """
         return ""
 
     def enabled(self) -> bool:
-        """Check if Consul is enabled."""
+        """Check if Consul is enabled.
+
+        Check if the host and the port are set and if the Consul status leader is available.
+
+        :return: True if Consul is enabled, False otherwise
+        """
         if not all([self.host, self.port]):
+            logger.debug("Consul is not enabled. The host and the port are not set.")
             return False
 
         try:
             self.client().status.leader()
             return True
-        except ConsulException:
+        except ConsulException as e:
+            logger.debug("Consul is not enabled. Failed to get the leader.", exc_info=e)
             return False
 
 
@@ -94,7 +105,7 @@ class ConsulConfigSettingsSource(PydanticBaseSettingsSource):
     def __init__(
         self,
         settings_cls: Type[PydanticBaseSettings],
-        consul_settings: ConsulBaseSettings,
+        consul_settings: ConsulClientSettings,
     ) -> None:
         super().__init__(settings_cls)
         self.consul = consul_settings.client()
@@ -161,16 +172,16 @@ class ConsulConfigSettingsSource(PydanticBaseSettingsSource):
         return d
 
 
-class ConsulSettingsConfigDict(SettingsConfigDict, total=False):
+class SettingsConfigDict(PydanticSettingsConfigDict, total=False):
     """Consul settings config dict."""
 
-    consul_model: ConsulBaseSettings | None
+    consul_model: ConsulClientSettings | None
 
 
-class BaseSettings(PydanticBaseSettings):
+class BaseSettingsWithConsul(PydanticBaseSettings):
     """New base settings settings."""
 
-    model_config: ConsulSettingsConfigDict
+    model_config: SettingsConfigDict
 
     @classmethod
     def settings_customise_sources(
@@ -197,10 +208,14 @@ class BaseSettings(PydanticBaseSettings):
             dotenv_settings,
             file_secret_settings,
         )
-        consul_settings: ConsulBaseSettings | None = cls.model_config.get("consul_model", None)
-        if not isinstance(consul_settings, ConsulBaseSettings) or not consul_settings.enabled():
+        consul_settings: ConsulClientSettings | None = cls.model_config.get("consul_model", None)
+        if not isinstance(consul_settings, ConsulClientSettings):
+            logger.debug("Consul settings are not set or not valid. Skip Consul settings source.")
             return settings_source
-
+        if not consul_settings.enabled():
+            logger.debug("Consul is not enabled. Skip Consul settings source.")
+            return settings_source
+        logger.debug("Add Consul settings source.")
         return (
             settings_source[0],
             ConsulConfigSettingsSource(settings_cls, consul_settings=consul_settings),
